@@ -5,8 +5,6 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import authRoutes from "./routes/authRoutes";
-// import articleRoutes from './routes/articleRoutes';
-// import userRoutes from './routes/userRoutes';
 import { IError } from "./types";
 import morgan from "morgan";
 import articleRoute from "./routes/articleRoutes";
