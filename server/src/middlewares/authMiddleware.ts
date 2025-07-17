@@ -26,7 +26,7 @@ export const authMiddleware = (
   try {
     const decoded = jwt.verify(
       token,
-      "your_jwt_secret_key" as string
+      process.env.JWT_SECRET as string
     ) as jwt.JwtPayload;
 
     req.user = {

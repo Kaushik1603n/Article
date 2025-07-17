@@ -4,12 +4,12 @@ import { authMiddleware } from '../middlewares/authMiddleware';
 
 const articleRoute = express.Router();
 
-articleRoute.post('/article',authMiddleware,uploadMiddleware, article);
-articleRoute.put('/article/:id',authMiddleware,uploadMiddleware, editArticle);
-articleRoute.delete('/article/:id',authMiddleware,uploadMiddleware, deleteArticle);
-articleRoute.get('/article',authMiddleware, getArticle);
-articleRoute.put('/:articleId/reaction', authMiddleware, handleReaction);
-articleRoute.put('/preferences', authMiddleware, setPreferences);
+articleRoute.post('/article',uploadMiddleware, article);
+articleRoute.put('/article/:id/:userId',uploadMiddleware, editArticle);
+articleRoute.delete('/article/:id/:userId', deleteArticle);
+articleRoute.get('/article/:userId', getArticle);
+articleRoute.put('/:articleId/reaction/:userId', handleReaction);
+articleRoute.put('/preferences/:userId', setPreferences);
 
 
 export default articleRoute;

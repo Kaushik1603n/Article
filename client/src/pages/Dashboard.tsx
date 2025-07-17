@@ -32,7 +32,7 @@ const Dashboard: React.FC = () => {
     const fetchArticles = async () => {
       setLoading(true);
       try {
-        const feedResponse = await axiosClient.get("/articles/article", {
+        const feedResponse = await axiosClient.get(`/articles/article/${user?._id}`, {
           params: {
             preferences: parsedUser?.preferences
           },
@@ -69,7 +69,7 @@ const Dashboard: React.FC = () => {
 
   const handleArticleInteraction = async (articleId: string, action: 'like' | 'dislike' | 'block') => {
     try {
-      const response = await axiosClient.put(`/articles/${articleId}/reaction`, { action });
+      const response = await axiosClient.put(`/articles/${articleId}/reaction/${user?._id}`, { action });
       const updatedArticle = response.data;
 
       setFeedArticles(prev => prev.map(article =>
@@ -96,7 +96,7 @@ const Dashboard: React.FC = () => {
     if (!user) return;
 
     try {
-      const response = await axiosClient.put(`/articles/preferences`, { preferences: newPreferences });
+      const response = await axiosClient.put(`/articles/preferences/${user?._id}`, { preferences: newPreferences });
       const updatedUser = response.data.user;
       setUser(updatedUser);
       localStorage.setItem('user', JSON.stringify(updatedUser));
@@ -104,7 +104,7 @@ const Dashboard: React.FC = () => {
 
       setLoading(true);
       try {
-        const feedResponse = await axiosClient.get('/articles/article', {
+        const feedResponse = await axiosClient.get(`/articles/article/${user?._id}`, {
           params: {
             preferences: newPreferences
           },
@@ -147,7 +147,7 @@ const Dashboard: React.FC = () => {
 
   const handleLike = async (articleId: string) => {
     try {
-      const response = await axiosClient.put(`/articles/${articleId}/reaction`, { action: "like" });
+      const response = await axiosClient.put(`/articles/${articleId}/reaction/${user?._id}`, { action: "like" });
       const updatedArticle = response.data;
 
       setFeedArticles(prev => prev.map(article =>
@@ -170,7 +170,7 @@ const Dashboard: React.FC = () => {
 
   const handleDislike = async (articleId: string) => {
     try {
-      const response = await axiosClient.put(`/articles/${articleId}/reaction`, { action: "dislike" });
+      const response = await axiosClient.put(`/articles/${articleId}/reaction/${user?._id}`, { action: "dislike" });
       const updatedArticle = response.data;
 
       setFeedArticles(prev => prev.map(article =>
@@ -192,7 +192,7 @@ const Dashboard: React.FC = () => {
 
   const handleBlock = async (articleId: string) => {
     try {
-      const response = await axiosClient.put(`/articles/${articleId}/reaction`, { action: "block" });
+      const response = await axiosClient.put(`/articles/${articleId}/reaction/${user?._id}`, { action: "block" });
       const updatedArticle = response.data;
 
       setFeedArticles(prev => prev.map(article =>
@@ -213,7 +213,7 @@ const Dashboard: React.FC = () => {
 
   const logout = async (): Promise<void> => {
     try {
-      await axiosClient.post('auth/logout', {}, {
+      await axiosClient.post(`auth/logout`, {}, {
         withCredentials: true,
       });
 

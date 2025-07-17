@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Camera, X, Plus, Tag, Folder, FileText, ImageIcon, Loader } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
-import type { Article } from '../types';
+import type { Article, User } from '../types';
 import { toast } from 'react-toastify';
 
 interface EditArticleModalProps {
@@ -26,6 +26,18 @@ const EditArticleModal: React.FC<EditArticleModalProps> = ({ article, onClose, o
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+
+
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (!userData) {
+      return;
+    }
+
+    const parsedUser = JSON.parse(userData);
+    setUser(parsedUser);
+  }, [])
 
   const categories = [
     'technology', 'health', 'sports',
@@ -141,7 +153,7 @@ const EditArticleModal: React.FC<EditArticleModalProps> = ({ article, onClose, o
         formData.append('image', articleData.image);
       }
 
-      const response = await axiosClient.put(`/articles/article/${article._id}`, formData, {
+      const response = await axiosClient.put(`/articles/article/${article._id}/${user?._id}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         }
@@ -194,9 +206,8 @@ const EditArticleModal: React.FC<EditArticleModalProps> = ({ article, onClose, o
               type="text"
               value={articleData.name}
               onChange={(e) => handleInputChange('name', e.target.value)}
-              className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${
-                errors.name ? 'border-red-300 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
-              }`}
+              className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${errors.name ? 'border-red-300 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
+                }`}
             />
             {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
           </div>
@@ -210,9 +221,8 @@ const EditArticleModal: React.FC<EditArticleModalProps> = ({ article, onClose, o
               value={articleData.description}
               onChange={(e) => handleInputChange('description', e.target.value)}
               rows={3}
-              className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors resize-none ${
-                errors.description ? 'border-red-300 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
-              }`}
+              className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors resize-none ${errors.description ? 'border-red-300 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
+                }`}
             />
             {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
           </div>
@@ -226,9 +236,8 @@ const EditArticleModal: React.FC<EditArticleModalProps> = ({ article, onClose, o
               value={articleData.content}
               onChange={(e) => handleInputChange('content', e.target.value)}
               rows={12}
-              className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors resize-none ${
-                errors.content ? 'border-red-300 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
-              }`}
+              className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors resize-none ${errors.content ? 'border-red-300 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
+                }`}
             />
             {errors.content && <p className="text-red-500 text-sm mt-1">{errors.content}</p>}
           </div>
@@ -241,9 +250,8 @@ const EditArticleModal: React.FC<EditArticleModalProps> = ({ article, onClose, o
             <select
               value={articleData.category}
               onChange={(e) => handleInputChange('category', e.target.value)}
-              className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${
-                errors.category ? 'border-red-300 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
-              }`}
+              className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${errors.category ? 'border-red-300 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
+                }`}
             >
               <option value="">Select a category...</option>
               {categories.map(category => (
@@ -302,9 +310,8 @@ const EditArticleModal: React.FC<EditArticleModalProps> = ({ article, onClose, o
             </label>
 
             <div
-              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
-              }`}
+              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
+                }`}
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
               onDragOver={handleDrag}

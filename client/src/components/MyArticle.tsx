@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axiosClient from "../utils/axiosClient";
 import axios from "axios";
-import type { Article } from "../types";
+import type { Article, User } from "../types";
 import { toast } from "react-toastify";
 import MyArticleCard from "./MyArticleCard";
 import EditArticleModal from "./EditArticleModal";
@@ -10,10 +10,22 @@ function MyArticle() {
   const [feedArticles, setFeedArticles] = useState<Article[]>([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentArticle, setCurrentArticle] = useState<Article | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (!userData) {
+      return;
+    }
+
+    const parsedUser = JSON.parse(userData);
+    setUser(parsedUser);
+  }, [])
+
 
   const fetchArticles = async () => {
     try {
-      const feedResponse = await axiosClient.get("/articles/article");
+      const feedResponse = await axiosClient.get(`/articles/article/${user?._id}`);
       setFeedArticles(feedResponse.data?.feed || []);
 
     } catch (err) {
@@ -46,10 +58,10 @@ function MyArticle() {
 
   const handleDeleteArticle = async (id: string) => {
     try {
-      await axiosClient.delete(`/articles/article/${id}`)
+      await axiosClient.delete(`/articles/article/${id}/${user?._id}`)
       fetchArticles();
       toast.success("Article deleted successfully")
-      
+
     } catch (err) {
       let errorMessage = 'Failed to delete articles';
       if (axios.isAxiosError(err)) {

@@ -67,7 +67,7 @@ export const editArticle = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { name, description, content, category, tags } = req.body;
-    const userId = req.user?.userId;
+    const { userId } = req.params;
 
     if (!userId) {
       return res.status(401).json({ message: "Invalid credentials" });
@@ -144,8 +144,8 @@ export const editArticle = async (req: Request, res: Response) => {
 };
 export const deleteArticle = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params; // Get article ID from URL params
-    const userId = req.user?.userId;
+    const { id } = req.params;
+    const { userId } = req.params;
 
     if (!userId) {
       return res.status(401).json({ message: "Invalid credentials" });
@@ -173,7 +173,9 @@ export const deleteArticle = async (req: Request, res: Response) => {
 
 export const getArticle = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.userId;
+    const { userId } = req.params;
+
+    // const userId = req.user?.userId;
 
     if (!userId) {
       return res.status(401).json({ message: "Invalid credentials" });
@@ -226,7 +228,7 @@ export const handleReaction = async (req: Request, res: Response) => {
   try {
     const { action } = req.body;
     const { articleId } = req.params;
-    const userId = req.user?.userId; // Assuming you have authentication middleware
+    const { userId } = req.params;
 
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -292,7 +294,7 @@ export const handleReaction = async (req: Request, res: Response) => {
 export const setPreferences = async (req: Request, res: Response) => {
   try {
     const { preferences } = req.body;
-    const userId = req.user?.userId;
+    const { userId } = req.params;
 
     const user = await User.findByIdAndUpdate(
       userId,
