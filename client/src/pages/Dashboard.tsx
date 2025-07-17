@@ -12,7 +12,6 @@ import { Loader } from 'lucide-react';
 const Dashboard: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [feedArticles, setFeedArticles] = useState<Article[]>([]);
-  // const [userArticles, setUserArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
