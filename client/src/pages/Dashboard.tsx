@@ -32,7 +32,8 @@ const Dashboard: React.FC = () => {
     const fetchArticles = async () => {
       setLoading(true);
       try {
-        const feedResponse = await axiosClient.get(`/articles/article/${user?._id}`, {
+        
+        const feedResponse = await axiosClient.get(`/articles/article/${parsedUser?._id}`, {
           params: {
             preferences: parsedUser?.preferences
           },
@@ -49,6 +50,7 @@ const Dashboard: React.FC = () => {
 
         });
         setFeedArticles(feedResponse.data?.feed || []);
+        
 
       } catch (err) {
         let errorMessage = 'Failed to load articles';
