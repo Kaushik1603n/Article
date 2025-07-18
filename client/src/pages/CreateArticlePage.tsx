@@ -19,7 +19,7 @@ const CreateArticlePage = () => {
         name: '',
         description: '',
         content: '',
-        image: null, 
+        image: null,
         tags: [],
         category: ''
     });
@@ -229,7 +229,7 @@ const CreateArticlePage = () => {
                             {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
                         </div>
 
-\                        <div>
+                        <div>
                             <label className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3">
                                 <FileText size={20} />
                                 Article Content

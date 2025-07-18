@@ -223,6 +223,29 @@ export const getArticle = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+export const getMyArticle = async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    const articles = await Article.find({author:userId})
+      .sort({ createdAt: -1 })
+      .populate("author", "firstName email")
+      .lean();    
+
+
+    res.status(201).json({
+      success: true,
+      feed: articles || [],
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
 
 export const handleReaction = async (req: Request, res: Response) => {
   try {

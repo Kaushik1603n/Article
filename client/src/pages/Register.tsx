@@ -341,7 +341,7 @@ const Register: React.FC = () => {
             </button>
           </form>
 
-          \          <div className="mt-6 text-center md:hidden">
+          <div className="mt-6 text-center md:hidden">
             <p className="text-gray-600 text-sm">
               Already have an account?{' '}
               <button

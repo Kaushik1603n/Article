@@ -20,12 +20,19 @@ function MyArticle() {
 
     const parsedUser = JSON.parse(userData);
     setUser(parsedUser);
+    fetchArticles()
   }, [])
 
 
   const fetchArticles = async () => {
     try {
-      const feedResponse = await axiosClient.get(`/articles/article/${user?._id}`);
+      const userData = localStorage.getItem('user');
+      if (!userData) {
+        return;
+      }
+
+      const parsedUser = JSON.parse(userData);
+      const feedResponse = await axiosClient.get(`/articles/myarticle/${parsedUser?._id}`);
       setFeedArticles(feedResponse.data?.feed || []);
 
     } catch (err) {
@@ -40,9 +47,11 @@ function MyArticle() {
     }
   };
 
-  useEffect(() => {
-    fetchArticles();
-  }, []);
+  // useEffect(() => {
+  //   if (user?._id) {
+  //     fetchArticles();
+  //   }
+  // }, [user]);
 
   const handleEditArticle = async (article: Article) => {
     setCurrentArticle(article);
