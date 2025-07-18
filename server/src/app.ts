@@ -25,7 +25,7 @@ class App {
   private config(): void {
     this.app.use(
       cors({
-        origin: "http://localhost:5173",
+        origin:"https://article-frontend-ldmr.onrender.com",
         credentials: true,
       })
     );
