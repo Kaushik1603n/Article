@@ -242,35 +242,6 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
-      {/* <header className="bg-white shadow rounded-lg p-6 mb-6 flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">Welcome, {user?.firstName}!</h1>
-        <div className="space-x-4">
-          <button
-            onClick={() => setShowPrefsModal(true)}
-            className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors"
-          >
-            Edit Preferences
-          </button>
-          <button
-            onClick={() => navigate('/create-article')}
-            className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors"
-          >
-            Create Article
-          </button>
-          <button
-            onClick={() => navigate('/settings')}
-            className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors"
-          >
-            Settings
-          </button>
-          <button
-            onClick={logout}
-            className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors"
-          >
-            Logout
-          </button>
-        </div>
-      </header> */}
       <header className="bg-white/80 border-b border-gray-200 sticky top-0">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
@@ -323,8 +294,7 @@ const Dashboard: React.FC = () => {
 
 
       <main className="max-w-7xl mx-auto">
-        <section className="mb-12">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Your Feed</h2>
+        <section className="mb-12 mt-6">
           {feedArticles.length === 0 ? (
             <p className="text-gray-600">No articles match your current preferences.</p>
           ) : (
