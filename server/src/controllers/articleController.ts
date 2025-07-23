@@ -26,6 +26,22 @@ export const article = async (req: Request, res: Response) => {
   try {
     const { userId, name, description, content, category, tags } = req.body;
 
+    if (!userId || !name || !description || !content || !category) {
+      return res
+        .status(400)
+        .json({ message: "All required fields must be provided." });
+    }
+
+    if (name.trim().length < 3) {
+      return res
+        .status(400)
+        .json({ message: "Title must be at least 3 characters long." });
+    }
+
+    if (req.file && !req.file.mimetype.startsWith("image/")) {
+      return res.status(400).json({ message: "Only image files are allowed." });
+    }
+
     let imageUrl = null;
     if (req.file) {
       const file = req.file;
@@ -42,7 +58,6 @@ export const article = async (req: Request, res: Response) => {
 
       imageUrl = result.secure_url;
     }
-    console.log(imageUrl);
 
     const newArticle = await Article.create({
       title: name,
@@ -63,15 +78,29 @@ export const article = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
 export const editArticle = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { name, description, content, category, tags } = req.body;
     const { userId } = req.params;
 
-    if (!userId) {
-      return res.status(401).json({ message: "Invalid credentials" });
+    if (!userId || !id) {
+      return res
+        .status(400)
+        .json({ message: "Missing user ID or article ID." });
     }
+
+    if (!name && !description && !content && !category && !tags && !req.file) {
+      return res.status(400).json({ message: "No update fields provided." });
+    }
+
+    if (name && name.trim().length < 3) {
+      return res
+        .status(400)
+        .json({ message: "Title must be at least 3 characters long." });
+    }
+
     const existingArticle = await Article.findById(id);
     if (!existingArticle) {
       return res.status(404).json({ message: "Article not found" });
@@ -85,11 +114,9 @@ export const editArticle = async (req: Request, res: Response) => {
 
     let imageUrl = existingArticle.imageUrl; // Keep existing image by default
 
-    // If new image was uploaded
     if (req.file) {
       const file = req.file;
 
-      // First delete the old image from Cloudinary if it exists
       if (existingArticle.imageUrl) {
         const publicId = existingArticle.imageUrl
           .split("/")
@@ -100,7 +127,6 @@ export const editArticle = async (req: Request, res: Response) => {
         }
       }
 
-      // Upload new image
       const result = await new Promise<{ secure_url: string }>(
         (resolve, reject) => {
           cloudinary.uploader
@@ -115,23 +141,19 @@ export const editArticle = async (req: Request, res: Response) => {
       imageUrl = result.secure_url;
     }
 
-    // Prepare update data
     const updateData: any = {
       title: name,
       description,
       content,
       category,
       tags: Array.isArray(tags) ? tags : [tags],
-      ...(imageUrl && { imageUrl }), // Only update imageUrl if it exists
+      ...(imageUrl && { imageUrl }),
       updatedAt: new Date(),
     };
 
-    // Find and update the article
-    const updatedArticle = await Article.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true } // Return the updated document
-    );
+    const updatedArticle = await Article.findByIdAndUpdate(id, updateData, {
+      new: true,
+    });
 
     res.status(200).json({
       success: true,
@@ -142,13 +164,16 @@ export const editArticle = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
 export const deleteArticle = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { userId } = req.params;
 
-    if (!userId) {
-      return res.status(401).json({ message: "Invalid credentials" });
+    if (!userId || !id) {
+      return res
+        .status(400)
+        .json({ message: "Missing user ID or article ID." });
     }
 
     const existingArticle = await Article.findById(id);
@@ -180,12 +205,17 @@ export const getArticle = async (req: Request, res: Response) => {
     if (!userId) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
-    const preferences = req.query.preferences;
 
-    const preferencesArray = Array.isArray(preferences)
-      ? preferences
-      : preferences
-      ? [preferences]
+    const user = await User.findById(userId, { preferences: 1 });
+
+    if (!user) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    const preferencesArray = Array.isArray(user.preferences)
+      ? user.preferences
+      : user.preferences
+      ? [user.preferences]
       : [];
 
     const filter =
@@ -214,7 +244,7 @@ export const getArticle = async (req: Request, res: Response) => {
       };
     });
 
-    res.status(201).json({
+    res.status(200).json({
       success: true,
       feed: feed || [],
     });
@@ -223,6 +253,7 @@ export const getArticle = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
 export const getMyArticle = async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
@@ -231,13 +262,12 @@ export const getMyArticle = async (req: Request, res: Response) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    const articles = await Article.find({author:userId})
+    const articles = await Article.find({ author: userId })
       .sort({ createdAt: -1 })
       .populate("author", "firstName email")
-      .lean();    
+      .lean();
 
-
-    res.status(201).json({
+    res.status(200).json({
       success: true,
       feed: articles || [],
     });
@@ -256,6 +286,9 @@ export const handleReaction = async (req: Request, res: Response) => {
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
+    if (!articleId) {
+      return res.status(401).json({ message: "articleId missing" });
+    }
 
     if (!["like", "dislike", "block"].includes(action)) {
       return res.status(400).json({ message: "Invalid action" });
@@ -269,7 +302,6 @@ export const handleReaction = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Article not found" });
     }
 
-    // Helper function to toggle user in array
     const toggleReaction = (array: Types.ObjectId[]) => {
       const userIdObj = new Types.ObjectId(userId);
       const index = array.findIndex((id) => id.equals(userId));
@@ -280,7 +312,6 @@ export const handleReaction = async (req: Request, res: Response) => {
       }
     };
 
-    // Handle each action type
     switch (action) {
       case "like":
         toggleReaction(article.likes);
@@ -318,6 +349,10 @@ export const setPreferences = async (req: Request, res: Response) => {
   try {
     const { preferences } = req.body;
     const { userId } = req.params;
+
+     if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
     const user = await User.findByIdAndUpdate(
       userId,
