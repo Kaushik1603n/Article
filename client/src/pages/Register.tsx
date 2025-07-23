@@ -45,6 +45,9 @@ const Register: React.FC = () => {
     } else if (formData.firstName.trim().length < 2) {
       setError('First name must be at least 2 characters');
       return;
+    } else if (/_{2,}/.test(formData.firstName)) {
+      setError('First name should not contain multiple underscores');
+      return;
     }
 
     if (!formData.lastName?.trim()) {
@@ -52,6 +55,9 @@ const Register: React.FC = () => {
       return;
     } else if (formData.lastName.trim().length < 1) {
       setError('Last name must be at least 1 characters');
+      return;
+    } else if (/_{2,}/.test(formData.firstName)) {
+      setError('First name should not contain multiple underscores');
       return;
     }
 
@@ -70,9 +76,15 @@ const Register: React.FC = () => {
       setError('Phone number is required');
       return;
     } else {
+      const phone = formData.phone.trim();
       const phoneRegex = /^[0-9]{10,15}$/;
       if (!phoneRegex.test(formData.phone.trim())) {
         setError('Please enter a valid phone number (10-15 digits)');
+        return;
+      }
+
+      if (/^(\d)\1+$/.test(phone)) {
+        setError('Phone number cannot have all same digits');
         return;
       }
     }
@@ -99,7 +111,6 @@ const Register: React.FC = () => {
       setError('Password must be at least 8 characters long');
       return;
     }
-    console.log(formData.preferences.length);
 
     if (formData.preferences.length < 1) {
       setError("Select at least 1 Interest");
