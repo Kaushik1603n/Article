@@ -7,7 +7,8 @@ import PreferencesModal from '../components/PreferencesModal';
 import ArticleModal from '../components/ArticleModal';
 import axiosClient from '../utils/axiosClient';
 import { toast } from 'react-toastify';
-import { BookOpen, Edit3, Loader, LogOut, Plus, Settings } from 'lucide-react';
+import { Loader } from 'lucide-react';
+import DashboardHeader from '../components/DashboardHeader';
 
 const Dashboard: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -214,7 +215,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
-      <header className="bg-white/80 border-b border-gray-200 sticky top-0 z-40">
+      {/* <header className="bg-white/80 border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -262,8 +263,12 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
         </div>
-      </header>
-
+      </header> */}
+      <DashboardHeader
+        user={user}
+        onShowPrefsModal={() => setShowPrefsModal(true)}
+        onLogout={logout}
+      />
 
       <main className="max-w-7xl mx-auto">
         <section className="mb-12 mt-6">

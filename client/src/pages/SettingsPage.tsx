@@ -4,6 +4,8 @@ import { User, Lock, Eye, EyeOff, Save, Check } from 'lucide-react';
 import axiosClient from '../utils/axiosClient';
 import axios from 'axios';
 import ArticleEdit from '../components/MyArticle';
+import NavBar from '../components/NavBar';
+import type { User as UserType } from '../types';
 
 type PersonalInfo = {
     _id: string;
@@ -27,6 +29,7 @@ type UserData = {
     preferences: string[];
     token: string;
     _id: string;
+    dob: string;
 };
 
 const SettingsPage = () => {
@@ -39,6 +42,8 @@ const SettingsPage = () => {
     const [saved, setSaved] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [user, setUser] = useState<UserType | null>(null);
+
 
     const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
         _id: '',
@@ -66,6 +71,7 @@ const SettingsPage = () => {
                 email: parsedUser.email,
                 phone: parsedUser.phone,
             });
+            setUser(parsedUser)
         }
 
 
@@ -202,11 +208,11 @@ const SettingsPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            <div className="max-w-6xl mx-auto px-4 py-8">
-                {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Settings</h1>
+        <div className="min-h-screen bg-gray-100 p-6">
+            <NavBar user={user} />
+            <div className="max-w-6xl mx-auto px-4 py-4">
+                <div className="mb-4">
+                    <h1 className="text-2xl font-bold text-gray-900 mb-2">Settings</h1>
                     <p className="text-gray-600">Manage your account and preferences</p>
                 </div>
 
@@ -359,12 +365,12 @@ const SettingsPage = () => {
                                             value={passwordInfo.currentPassword}
                                             onChange={(e) => handlePasswordInfoChange('currentPassword', e.target.value)}
                                             className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            />
+                                        />
                                         <button
                                             type="button"
                                             onClick={() => setShowPassword(!showPassword)}
                                             className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                                            >
+                                        >
                                             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                         </button>
                                     </div>
@@ -386,7 +392,7 @@ const SettingsPage = () => {
                                                 type="button"
                                                 onClick={() => setShowNewPassword(!showNewPassword)}
                                                 className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                                                >
+                                            >
                                                 {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                             </button>
                                         </div>
@@ -402,12 +408,12 @@ const SettingsPage = () => {
                                                 value={passwordInfo.confirmPassword}
                                                 onChange={(e) => handlePasswordInfoChange('confirmPassword', e.target.value)}
                                                 className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                />
+                                            />
                                             <button
                                                 type="button"
                                                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                                 className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                                                >
+                                            >
                                                 {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                             </button>
                                         </div>
@@ -433,7 +439,7 @@ const SettingsPage = () => {
                                     className={`px-6 py-3 rounded-md font-medium transition-colors flex items-center ${saved
                                         ? 'bg-green-500 text-white'
                                         : 'bg-blue-500 text-white hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed'
-                                    }`}
+                                        }`}
                                 >
                                     {isLoading ? (
                                         'Saving...'
@@ -453,9 +459,9 @@ const SettingsPage = () => {
                         </div>
                     </div>
                 )}
-            {activeTab === 'article' && (
-                <ArticleEdit/>
-            )}
+                {activeTab === 'article' && (
+                    <ArticleEdit />
+                )}
             </div>
         </div>
     );
