@@ -263,7 +263,7 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
         </div>
-      </header> */}
+      </header> */}  
       <DashboardHeader
         user={user}
         onShowPrefsModal={() => setShowPrefsModal(true)}
