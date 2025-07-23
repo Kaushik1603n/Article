@@ -7,7 +7,7 @@ import PreferencesModal from '../components/PreferencesModal';
 import ArticleModal from '../components/ArticleModal';
 import axiosClient from '../utils/axiosClient';
 import { toast } from 'react-toastify';
-import {  BookOpen, Edit3, Loader, LogOut, Plus, Settings } from 'lucide-react';
+import { BookOpen, Edit3, Loader, LogOut, Plus, Settings } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -32,25 +32,10 @@ const Dashboard: React.FC = () => {
     const fetchArticles = async () => {
       setLoading(true);
       try {
-        
-        const feedResponse = await axiosClient.get(`/articles/article/${parsedUser?._id}`, {
-          params: {
-            preferences: parsedUser?.preferences
-          },
-          paramsSerializer: params => {
-            return Object.entries(params)
-              .map(([key, value]) => {
-                if (Array.isArray(value)) {
-                  return value.map(v => `${key}=${encodeURIComponent(v)}`).join('&');
-                }
-                return `${key}=${encodeURIComponent(value)}`;
-              })
-              .join('&');
-          }
 
-        });
+        const feedResponse = await axiosClient.get(`/articles/article/${parsedUser?._id}`);
         setFeedArticles(feedResponse.data?.feed || []);
-        
+
 
       } catch (err) {
         let errorMessage = 'Failed to load articles';
@@ -106,22 +91,7 @@ const Dashboard: React.FC = () => {
 
       setLoading(true);
       try {
-        const feedResponse = await axiosClient.get(`/articles/article/${user?._id}`, {
-          params: {
-            preferences: newPreferences
-          },
-          paramsSerializer: params => {
-            return Object.entries(params)
-              .map(([key, value]) => {
-                if (Array.isArray(value)) {
-                  return value.map(v => `${key}=${encodeURIComponent(v)}`).join('&');
-                }
-                return `${key}=${encodeURIComponent(value)}`;
-              })
-              .join('&');
-          }
-
-        });
+        const feedResponse = await axiosClient.get(`/articles/article/${user?._id}`);
         setFeedArticles(feedResponse.data?.feed);
         setShowPrefsModal(false);
       } catch (err) {

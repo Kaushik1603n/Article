@@ -4,6 +4,7 @@ import axiosClient from '../utils/axiosClient';
 import type { User } from '../types';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import axios from 'axios';
 
 interface ArticleData {
     name: string;
@@ -94,6 +95,10 @@ const CreateArticlePage = () => {
                 tags: [...prev.tags, currentTag.trim()]
             }));
             setCurrentTag('');
+            setErrors(prev => ({
+                ...prev,
+                tags: ''
+            }));
         }
     };
 
@@ -128,6 +133,18 @@ const CreateArticlePage = () => {
         if (!articleData.description.trim()) newErrors.description = 'Description is required';
         if (!articleData.content.trim()) newErrors.content = 'Content is required';
         if (!articleData.category) newErrors.category = 'Category is required';
+
+        if (!articleData.tags || articleData.tags.length === 0) {
+            newErrors.tags = 'At least one tag is required';
+        } else if (articleData.tags.some(tag => !tag.trim())) {
+            newErrors.tags = 'Tags cannot be empty';
+        }
+
+        if (!articleData.image) {
+            newErrors.image = 'Article image is required';
+        } else if (!['image/jpeg', 'image/png', 'image/webp'].includes(articleData.image.type)) {
+            newErrors.image = 'Only JPG, PNG, or WEBP images are allowed';
+        }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -177,7 +194,12 @@ const CreateArticlePage = () => {
 
         } catch (error) {
             console.error('Error submitting article:', error);
-            toast.error('There was an error submitting your article. Please try again.');
+            if (axios.isAxiosError(error) && error.response) {
+                const message = error.response.data?.message || 'Something went wrong.';
+                toast.error(message);
+            } else {
+                toast.error('An unexpected error occurred');
+            }
         } finally {
             setIsSubmitting(false);
         }
@@ -286,6 +308,8 @@ const CreateArticlePage = () => {
                                     <Plus size={20} />
                                 </button>
                             </div>
+                            {errors.tags && <p className="text-red-500 text-sm mt-1">{errors.tags}</p>}
+
                             {articleData.tags.length > 0 && (
                                 <div className="flex flex-wrap gap-2">
                                     {articleData.tags.map(tag => (
