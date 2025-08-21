@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
-import User from "../models/User";
-import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { UserRepository } from "../Repository/UserRepository";
 import { IUser } from "../models/User";
+import { HttpStatusCode, MESSAGES } from "./constants";
 
 const generateToken = (user: IUser) => {
   return jwt.sign(
@@ -17,21 +17,20 @@ export const register = async (req: Request, res: Response) => {
     const { firstName, lastName, email, phone, dob, password, preferences } =
       req.body;
 
-    const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
+    const existingUser = await UserRepository.findByEmailOrPhone(email);
     if (existingUser) {
-      return res.status(400).json({ message: "User already exists" });
+      return res
+        .status(HttpStatusCode.BAD_REQUEST)
+        .json({ message: MESSAGES.USER_ALREADY_EXISTS });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    const user = await User.create({
+    const user = await UserRepository.create({
       firstName,
       lastName,
       email,
       phone,
       dob,
-      password: hashedPassword,
+      password,
       preferences: preferences || [],
     });
 
@@ -44,7 +43,7 @@ export const register = async (req: Request, res: Response) => {
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     });
 
-    res.status(201).json({
+    res.status(HttpStatusCode.CREATED).json({
       _id: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
@@ -54,7 +53,9 @@ export const register = async (req: Request, res: Response) => {
       token,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error" });
+    res
+      .status(HttpStatusCode.INTERNAL_SERVER_ERROR)
+      .json({ message: MESSAGES.SERVER_ERROR });
   }
 };
 
@@ -62,17 +63,18 @@ export const login = async (req: Request, res: Response) => {
   try {
     const { emailOrPhone, password } = req.body;
 
-    const user = await User.findOne({
-      $or: [{ email: emailOrPhone }, { phone: emailOrPhone }],
-    });
-
+    const user = await UserRepository.findByEmailOrPhone(emailOrPhone);
     if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res
+        .status(HttpStatusCode.UNAUTHORIZED)
+        .json({ message: MESSAGES.INVALID_CREDENTIALS });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await UserRepository.comparePassword(user, password);
     if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res
+        .status(HttpStatusCode.UNAUTHORIZED)
+        .json({ message: MESSAGES.INVALID_CREDENTIALS });
     }
 
     const token = generateToken(user);
@@ -83,7 +85,7 @@ export const login = async (req: Request, res: Response) => {
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     });
 
-    res.status(200).json({
+    res.status(HttpStatusCode.OK).json({
       _id: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
@@ -93,90 +95,114 @@ export const login = async (req: Request, res: Response) => {
       token,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error" });
+    res
+      .status(HttpStatusCode.INTERNAL_SERVER_ERROR)
+      .json({ message: MESSAGES.SERVER_ERROR });
   }
 };
 
 export const profile = async (req: Request, res: Response) => {
   try {
-    const { firstName, lastName, email, phone } = req.body;
+    const { firstName, lastName, phone ,email } = req.body;
+    
+    if (!email) {
+      return res
+        .status(HttpStatusCode.UNAUTHORIZED)
+        .json({ message: MESSAGES.UNAUTHORIZED });
+    }
+    
+    const updatedUser = await UserRepository.updateProfile(email, {
+      firstName,
+      lastName,
+      phone,
+    });
 
-    const existingUser = await User.findOne({ email: email });
-    if (!existingUser) {
-      return res.status(400).json({ message: "User not exists" });
+
+    if (!updatedUser) {
+      return res
+        .status(HttpStatusCode.NOT_FOUND)
+        .json({ message: MESSAGES.USER_NOT_FOUND });
     }
 
-    existingUser.firstName = firstName;
-    existingUser.lastName = lastName;
-    existingUser.phone = phone;
-
-    await existingUser.save();
-
-    return res.status(200).json({
-      message: "Profile updated successfully",
+    return res.status(HttpStatusCode.OK).json({
+      message: MESSAGES.PROFILE_UPDATED,
       user: {
-        _id: existingUser._id,
-        firstName: existingUser.firstName,
-        lastName: existingUser.lastName,
-        email: existingUser.email,
-        phone: existingUser.phone,
-        preferences: existingUser.preferences,
+        _id: updatedUser._id,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        preferences: updatedUser.preferences,
       },
     });
   } catch (error) {
     console.error("Profile update error:", error);
-    res.status(500).json({ message: "Server error" });
+    res
+      .status(HttpStatusCode.INTERNAL_SERVER_ERROR)
+      .json({ message: MESSAGES.SERVER_ERROR });
   }
 };
 
 export const password = async (req: Request, res: Response) => {
   try {
-    const { userId, currentPassword, newPassword, confirmPassword } = req.body;
+    const { currentPassword, newPassword, confirmPassword, userId } = req.body;
+
+    if (!userId) {
+      return res
+        .status(HttpStatusCode.UNAUTHORIZED)
+        .json({ message: MESSAGES.UNAUTHORIZED });
+    }
 
     if (!currentPassword || !newPassword || !confirmPassword) {
-      return res.status(400).json({ message: "All fields are required." });
+      return res
+        .status(HttpStatusCode.BAD_REQUEST)
+        .json({ message: MESSAGES.ALL_FIELDS_REQUIRED });
     }
 
     if (newPassword.length < 8) {
       return res
-        .status(400)
-        .json({ message: "Password must be at least 8 characters long." });
+        .status(HttpStatusCode.BAD_REQUEST)
+        .json({ message: MESSAGES.PASSWORD_MIN_LENGTH });
     }
 
     if (newPassword !== confirmPassword) {
-      return res.status(400).json({ message: "New passwords do not match." });
+      return res
+        .status(HttpStatusCode.BAD_REQUEST)
+        .json({ message: MESSAGES.PASSWORDS_DO_NOT_MATCH });
     }
 
-    const user = await User.findById(userId);
+    const user = await UserRepository.findById(userId);
     if (!user) {
-      return res.status(404).json({ message: "User not found." });
+      return res
+        .status(HttpStatusCode.NOT_FOUND)
+        .json({ message: MESSAGES.USER_NOT_FOUND });
     }
 
-    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    const isMatch = await UserRepository.comparePassword(user, currentPassword);
     if (!isMatch) {
       return res
-        .status(401)
-        .json({ message: "Current password is incorrect." });
+        .status(HttpStatusCode.UNAUTHORIZED)
+        .json({ message: MESSAGES.CURRENT_PASSWORD_INCORRECT });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    await UserRepository.updatePassword(userId, newPassword);
 
-    user.password = hashedPassword;
-    await user.save();
-
-    res.status(200).json({ message: "Password updated successfully." });
+    res.status(HttpStatusCode.OK).json({ message: MESSAGES.PASSWORD_UPDATED });
   } catch (error) {
     console.error("Password update error:", error);
-    res.status(500).json({ message: "Server error." });
+    res
+      .status(HttpStatusCode.INTERNAL_SERVER_ERROR)
+      .json({ message: MESSAGES.SERVER_ERROR });
   }
 };
 
 export const logout = async (req: Request, res: Response) => {
   try {
     res.clearCookie("token");
-    res.json({ message: "Logged out successfully" });
+    res.status(HttpStatusCode.OK).json({ message: MESSAGES.LOGGED_OUT });
   } catch (error) {
-    res.status(500).json({ message: "Server error" });
+    res
+      .status(HttpStatusCode.INTERNAL_SERVER_ERROR)
+      .json({ message: MESSAGES.SERVER_ERROR });
   }
 };

@@ -1,10 +1,12 @@
 import { Request, Response } from "express";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
-import Article from "../models/Article";
 import dotenv from "dotenv";
+import { ArticleRepository } from "../Repository/articleRepository";
+import { UserRepository } from "../Repository/UserRepository";
+import { HttpStatusCode, MESSAGES } from "./constants";
 import { Types } from "mongoose";
-import User from "../models/User";
+
 dotenv.config();
 
 const upload = multer({
@@ -28,18 +30,20 @@ export const article = async (req: Request, res: Response) => {
 
     if (!userId || !name || !description || !content || !category) {
       return res
-        .status(400)
-        .json({ message: "All required fields must be provided." });
+        .status(HttpStatusCode.BAD_REQUEST)
+        .json({ message: MESSAGES.ALL_FIELDS_REQUIRED });
     }
 
     if (name.trim().length < 3) {
       return res
-        .status(400)
-        .json({ message: "Title must be at least 3 characters long." });
+        .status(HttpStatusCode.BAD_REQUEST)
+        .json({ message: MESSAGES.TITLE_MIN_LENGTH });
     }
 
     if (req.file && !req.file.mimetype.startsWith("image/")) {
-      return res.status(400).json({ message: "Only image files are allowed." });
+      return res
+        .status(HttpStatusCode.BAD_REQUEST)
+        .json({ message: MESSAGES.ONLY_IMAGES_ALLOWED });
     }
 
     let imageUrl = null;
@@ -55,68 +59,77 @@ export const article = async (req: Request, res: Response) => {
             .end(file.buffer);
         }
       );
-
       imageUrl = result.secure_url;
     }
 
-    const newArticle = await Article.create({
+    if (!imageUrl) {
+      return res
+        .status(HttpStatusCode.BAD_REQUEST)
+        .json({ message: "Image upload failed, please try again." });
+    }
+
+    const newArticle = await ArticleRepository.create({
       title: name,
       description,
-      content: content,
-      category: category,
+      content,
+      category,
       tags: Array.isArray(tags) ? tags : [tags],
-      imageUrl: imageUrl,
+      imageUrl,
       author: userId,
     });
 
-    res.status(201).json({
+    res.status(HttpStatusCode.CREATED).json({
       success: true,
       article: newArticle,
     });
   } catch (error) {
     console.error("Error:", error);
-    res.status(500).json({ message: "Server error" });
+    res
+      .status(HttpStatusCode.INTERNAL_SERVER_ERROR)
+      .json({ message: MESSAGES.SERVER_ERROR });
   }
 };
 
 export const editArticle = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, description, content, category, tags } = req.body;
     const { userId } = req.params;
+    const { name, description, content, category, tags } = req.body;
 
     if (!userId || !id) {
       return res
-        .status(400)
-        .json({ message: "Missing user ID or article ID." });
+        .status(HttpStatusCode.BAD_REQUEST)
+        .json({ message: MESSAGES.ALL_FIELDS_REQUIRED });
     }
 
     if (!name && !description && !content && !category && !tags && !req.file) {
-      return res.status(400).json({ message: "No update fields provided." });
+      return res
+        .status(HttpStatusCode.BAD_REQUEST)
+        .json({ message: MESSAGES.NO_UPDATE_FIELDS });
     }
 
     if (name && name.trim().length < 3) {
       return res
-        .status(400)
-        .json({ message: "Title must be at least 3 characters long." });
+        .status(HttpStatusCode.BAD_REQUEST)
+        .json({ message: MESSAGES.TITLE_MIN_LENGTH });
     }
 
-    const existingArticle = await Article.findById(id);
+    const existingArticle = await ArticleRepository.findById(id);
     if (!existingArticle) {
-      return res.status(404).json({ message: "Article not found" });
-    }
-
-    if (existingArticle.author.toString() !== userId.toString()) {
       return res
-        .status(403)
-        .json({ message: "Unauthorized to edit this article" });
+        .status(HttpStatusCode.NOT_FOUND)
+        .json({ message: MESSAGES.ARTICLE_NOT_FOUND });
     }
 
-    let imageUrl = existingArticle.imageUrl; // Keep existing image by default
+    if (existingArticle.author._id.toString() !== userId.toString()) {
+      return res
+        .status(HttpStatusCode.FORBIDDEN)
+        .json({ message: MESSAGES.UNAUTHORIZED_ARTICLE_EDIT });
+    }
 
+    let imageUrl = existingArticle.imageUrl;
     if (req.file) {
       const file = req.file;
-
       if (existingArticle.imageUrl) {
         const publicId = existingArticle.imageUrl
           .split("/")
@@ -126,7 +139,6 @@ export const editArticle = async (req: Request, res: Response) => {
           await cloudinary.uploader.destroy(`articles/${publicId}`);
         }
       }
-
       const result = await new Promise<{ secure_url: string }>(
         (resolve, reject) => {
           cloudinary.uploader
@@ -137,7 +149,6 @@ export const editArticle = async (req: Request, res: Response) => {
             .end(file.buffer);
         }
       );
-
       imageUrl = result.secure_url;
     }
 
@@ -151,17 +162,17 @@ export const editArticle = async (req: Request, res: Response) => {
       updatedAt: new Date(),
     };
 
-    const updatedArticle = await Article.findByIdAndUpdate(id, updateData, {
-      new: true,
-    });
+    const updatedArticle = await ArticleRepository.update(id, updateData);
 
-    res.status(200).json({
+    res.status(HttpStatusCode.OK).json({
       success: true,
       article: updatedArticle,
     });
   } catch (error) {
     console.error("Error:", error);
-    res.status(500).json({ message: "Server error" });
+    res
+      .status(HttpStatusCode.INTERNAL_SERVER_ERROR)
+      .json({ message: MESSAGES.SERVER_ERROR });
   }
 };
 
@@ -172,27 +183,31 @@ export const deleteArticle = async (req: Request, res: Response) => {
 
     if (!userId || !id) {
       return res
-        .status(400)
-        .json({ message: "Missing user ID or article ID." });
+        .status(HttpStatusCode.BAD_REQUEST)
+        .json({ message: MESSAGES.ALL_FIELDS_REQUIRED });
     }
 
-    const existingArticle = await Article.findById(id);
+    const existingArticle = await ArticleRepository.findById(id);
     if (!existingArticle) {
-      return res.status(404).json({ message: "Article not found" });
-    }
-
-    if (existingArticle.author.toString() !== userId.toString()) {
       return res
-        .status(403)
-        .json({ message: "Unauthorized to delete this article" });
+        .status(HttpStatusCode.NOT_FOUND)
+        .json({ message: MESSAGES.ARTICLE_NOT_FOUND });
     }
 
-    await Article.findByIdAndDelete(id);
+    if (existingArticle.author._id.toString() !== userId.toString()) {
+      return res
+        .status(HttpStatusCode.FORBIDDEN)
+        .json({ message: MESSAGES.UNAUTHORIZED_ARTICLE_DELETE });
+    }
 
-    res.status(200).json({ message: "Article deleted successfully" });
+    await ArticleRepository.delete(id);
+
+    res.status(HttpStatusCode.OK).json({ message: MESSAGES.ARTICLE_DELETED });
   } catch (error) {
     console.error("Error:", error);
-    res.status(500).json({ message: "Server error" });
+    res
+      .status(HttpStatusCode.INTERNAL_SERVER_ERROR)
+      .json({ message: MESSAGES.SERVER_ERROR });
   }
 };
 
@@ -200,16 +215,17 @@ export const getArticle = async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
 
-    // const userId = req.user?.userId;
-
     if (!userId) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res
+        .status(HttpStatusCode.UNAUTHORIZED)
+        .json({ message: MESSAGES.UNAUTHORIZED });
     }
 
-    const user = await User.findById(userId, { preferences: 1 });
-
+    const user = await UserRepository.findById(userId);
     if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res
+        .status(HttpStatusCode.UNAUTHORIZED)
+        .json({ message: MESSAGES.USER_NOT_FOUND });
     }
 
     const preferencesArray = Array.isArray(user.preferences)
@@ -218,39 +234,35 @@ export const getArticle = async (req: Request, res: Response) => {
       ? [user.preferences]
       : [];
 
-    const filter =
-      preferencesArray.length > 0
-        ? { category: { $in: preferencesArray } }
-        : {};
+    const articles = await ArticleRepository.findByPreferences(
+      preferencesArray
+    );
 
-    const articles = await Article.find(filter)
-      .sort({ createdAt: -1 })
-      .populate("author", "firstName email")
-      .lean();
+    const feed = articles.map((article: any) => ({
+      ...article,
+      likesCount: article.likes.length,
+      dislikesCount: article.dislikes.length,
+      blocksCount: article.blocks.length,
+      isLiked: article.likes.some(
+        (like: Types.ObjectId) => like.toString() === userId
+      ),
+      isDisliked: article.dislikes.some(
+        (dislike: Types.ObjectId) => dislike.toString() === userId
+      ),
+      isBlocked: article.blocks.some(
+        (block: Types.ObjectId) => block.toString() === userId
+      ),
+    }));
 
-    const feed = articles.map((article) => {
-      const articleObj = article.toObject ? article.toObject() : article;
-
-      return {
-        ...articleObj,
-        likesCount: article.likes.length,
-        dislikesCount: article.dislikes.length,
-        blocksCount: article.blocks.length,
-        isLiked: article.likes.some((like) => like.toString() === userId),
-        isDisliked: article.dislikes.some(
-          (dislike) => dislike.toString() === userId
-        ),
-        isBlocked: article.blocks.some((block) => block.toString() === userId),
-      };
-    });
-
-    res.status(200).json({
+    res.status(HttpStatusCode.OK).json({
       success: true,
       feed: feed || [],
     });
   } catch (error) {
     console.error("Error:", error);
-    res.status(500).json({ message: "Server error" });
+    res
+      .status(HttpStatusCode.INTERNAL_SERVER_ERROR)
+      .json({ message: MESSAGES.SERVER_ERROR });
   }
 };
 
@@ -259,21 +271,22 @@ export const getMyArticle = async (req: Request, res: Response) => {
     const { userId } = req.params;
 
     if (!userId) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res
+        .status(HttpStatusCode.UNAUTHORIZED)
+        .json({ message: MESSAGES.UNAUTHORIZED });
     }
 
-    const articles = await Article.find({ author: userId })
-      .sort({ createdAt: -1 })
-      .populate("author", "firstName email")
-      .lean();
+    const articles = await ArticleRepository.findByAuthor(userId);
 
-    res.status(200).json({
+    res.status(HttpStatusCode.OK).json({
       success: true,
       feed: articles || [],
     });
   } catch (error) {
     console.error("Error:", error);
-    res.status(500).json({ message: "Server error" });
+    res
+      .status(HttpStatusCode.INTERNAL_SERVER_ERROR)
+      .json({ message: MESSAGES.SERVER_ERROR });
   }
 };
 
@@ -284,53 +297,35 @@ export const handleReaction = async (req: Request, res: Response) => {
     const { userId } = req.params;
 
     if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res
+        .status(HttpStatusCode.UNAUTHORIZED)
+        .json({ message: MESSAGES.UNAUTHORIZED });
     }
+
     if (!articleId) {
-      return res.status(401).json({ message: "articleId missing" });
+      return res
+        .status(HttpStatusCode.BAD_REQUEST)
+        .json({ message: MESSAGES.ARTICLE_ID_MISSING });
     }
 
     if (!["like", "dislike", "block"].includes(action)) {
-      return res.status(400).json({ message: "Invalid action" });
+      return res
+        .status(HttpStatusCode.BAD_REQUEST)
+        .json({ message: MESSAGES.INVALID_ACTION });
     }
 
-    const article = await Article.findById(articleId).populate(
-      "author",
-      "firstName email"
+    const updatedArticle = await ArticleRepository.handleReaction(
+      articleId,
+      userId,
+      action as "like" | "dislike" | "block"
     );
-    if (!article) {
-      return res.status(404).json({ message: "Article not found" });
+    if (!updatedArticle) {
+      return res
+        .status(HttpStatusCode.NOT_FOUND)
+        .json({ message: MESSAGES.ARTICLE_NOT_FOUND });
     }
 
-    const toggleReaction = (array: Types.ObjectId[]) => {
-      const userIdObj = new Types.ObjectId(userId);
-      const index = array.findIndex((id) => id.equals(userId));
-      if (index === -1) {
-        array.push(userIdObj);
-      } else {
-        array.splice(index, 1);
-      }
-    };
-
-    switch (action) {
-      case "like":
-        toggleReaction(article.likes);
-        article.dislikes = article.dislikes.filter((id) => !id.equals(userId));
-        break;
-
-      case "dislike":
-        toggleReaction(article.dislikes);
-        article.likes = article.likes.filter((id) => !id.equals(userId));
-        break;
-
-      case "block":
-        toggleReaction(article.blocks);
-        break;
-    }
-
-    const updatedArticle = await article.save();
-
-    res.json({
+    res.status(HttpStatusCode.OK).json({
       ...updatedArticle.toObject(),
       likesCount: updatedArticle.likes.length,
       dislikesCount: updatedArticle.dislikes.length,
@@ -341,7 +336,9 @@ export const handleReaction = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Reaction error:", error);
-    res.status(500).json({ message: "Server error" });
+    res
+      .status(HttpStatusCode.INTERNAL_SERVER_ERROR)
+      .json({ message: MESSAGES.SERVER_ERROR });
   }
 };
 
@@ -350,22 +347,21 @@ export const setPreferences = async (req: Request, res: Response) => {
     const { preferences } = req.body;
     const { userId } = req.params;
 
-     if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
+    if (!userId) {
+      return res
+        .status(HttpStatusCode.UNAUTHORIZED)
+        .json({ message: MESSAGES.UNAUTHORIZED });
     }
 
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { $set: { preferences: preferences } },
-      { new: true }
-    );
-
+    const user = await UserRepository.updatePreferences(userId, preferences);
     if (!user) {
-      return res.status(401).json({ message: "user not found" });
+      return res
+        .status(HttpStatusCode.NOT_FOUND)
+        .json({ message: MESSAGES.USER_NOT_FOUND });
     }
 
-    return res.status(200).json({
-      message: "preferences updated successfully",
+    return res.status(HttpStatusCode.OK).json({
+      message: MESSAGES.PREFERENCES_UPDATED,
       user: {
         _id: user._id,
         firstName: user.firstName,
@@ -376,6 +372,8 @@ export const setPreferences = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error" });
+    res
+      .status(HttpStatusCode.INTERNAL_SERVER_ERROR)
+      .json({ message: MESSAGES.SERVER_ERROR });
   }
 };

@@ -25,7 +25,8 @@ class App {
   private config(): void {
     this.app.use(
       cors({
-        origin:"https://article-frontend-ldmr.onrender.com",
+        origin:"http://localhost:5173",
+        // origin:"https://article-frontend-ldmr.onrender.com",
         credentials: true,
       })
     );
@@ -55,9 +56,7 @@ class App {
 
     this.app.use("/api/auth", authRoutes);
     this.app.use('/api/articles', articleRoute);
-    // this.app.use('/api/users', userRoutes);
 
-    // 404 Route
     this.app.use((req: Request, res: Response) => {
       res.status(404).json({ message: "Route not found" });
     });
